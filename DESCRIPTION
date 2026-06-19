@@ -1,0 +1,35 @@
+Package: DGQ
+Type: Package
+Title: Dynamic Geometric Quantiles for Multivariate Time Series
+Version: 1.0.0
+Authors@R: c(
+    person("Lizhong", "Chen", role = c("aut", "cre"),
+           email = "nealforeverfriend@gmail.com"),
+    person("Xueming", "Li", role = "aut")
+    )
+Description: Computes the Dynamic Geometric Quantile (DGQ) for collections of
+    multivariate time series, extending the empirical dynamic quantile of
+    Pena, Tsay and Zamar (2019) <doi:10.1080/00401706.2019.1575285> to the
+    multivariate setting via Chaudhuri's (1996) geometric quantile
+    <doi:10.2307/2291681>. A single entry point, DGQ(), returns both the
+    unconstrained time-wise geometric quantile (a free trajectory) and the
+    constrained empirical DGQ (a real observed series) for one or more tilt
+    directions. Supports raw Euclidean, pooled-whitening Mahalanobis, and
+    per-time Mahalanobis metrics, exact or CLARA-subsampled depth, and accepts
+    either a 3-D array or a list of matrices. The numerically heavy core is
+    implemented in C through the R C interface.
+License: GPL-3
+Encoding: UTF-8
+NeedsCompilation: yes
+SystemRequirements: OpenMP (optional)
+Imports:
+    stats,
+    grDevices,
+    graphics
+Suggests:
+    testthat (>= 3.0.0),
+    knitr
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
