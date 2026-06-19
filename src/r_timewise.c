@@ -13,7 +13,7 @@
  *
  * .Call contract:
  *   Z      numeric-coercible standardized array with dim c(N,T,d);
- *   u      numeric-coercible length-d tilt direction;
+ *   u      numeric-coercible length-(T*d) tilt trajectory, stored as T-by-d;
  *   iter   integer-coercible maximum Weiszfeld iteration count;
  *   eps    numeric-coercible convergence tolerance and distance guard.
  * Returns the unconstrained time-wise trajectory as a numeric T-by-d matrix.

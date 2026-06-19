@@ -12,10 +12,9 @@
 
 /* Solve the geometric-u-quantile problem independently for every time point.
  *
- * q and qn hold the current and next d-dimensional iterates. If either scratch
- * allocation fails, the routine returns immediately; the R wrapper owns the
- * output buffer and the process remains memory safe, but its values are then
- * unspecified because this pure routine has no R error-reporting mechanism.
+ * q and qn hold the current and next d-dimensional iterates. This pure
+ * numerical routine has no R error-reporting mechanism, so it returns
+ * immediately if scratch allocation fails.
  */
 void compute_timewise(const double *Z, int N, int T, int d,
                       const double *u, int iter, double eps,

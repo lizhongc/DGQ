@@ -29,13 +29,14 @@ DGQ(
 \item{X}{A numeric array of dimension \code{c(N, T, d)} (series, time, variables),
 or a list of \code{N} matrices each of dimension \code{c(T, d)}.}
 
-\item{u}{A length-\code{d} numeric vector giving a single tilt direction, or a
-matrix whose rows are directions. Required; must be non-zero. Each
-direction is normalized to unit length before computing the tilt vector
-\code{(2 * tau - 1) * u_norm}.}
+\item{u}{A length-\code{d} numeric vector giving one constant direction over time,
+or a \verb{T x d} numeric matrix giving a time-varying direction. Required; no
+time point may have zero norm. Directions are normalized time-wise before
+computing the tilt trajectory \code{(2 * tau - 1) * u_norm}.}
 
-\item{tau}{A scalar or numeric vector of quantile levels in \verb{[0, 1]} (default 0.5,
-representing the median). The tilt vector is calculated as \code{(2 * tau - 1) * u_norm}.}
+\item{tau}{A scalar or numeric vector of quantile levels strictly inside
+\verb{(0, 1)} (default 0.5, representing the median). Multiple values produce
+multiple returned directions, each using the same normalized \code{u}.}
 
 \item{metric}{Metric used for the underlying geometry: \code{"pooled"} (default,
 a single pooled-whitening Mahalanobis metric giving exact affine
@@ -82,8 +83,8 @@ and the analyzed data \code{X} (cumulative when \code{cumulative = TRUE}). See
 }
 \description{
 Computes the Dynamic Geometric Quantile (DGQ) for a collection of \code{N}
-multivariate trajectories. For each tilt direction \code{u} in the open unit ball
-the function returns two objects:
+multivariate trajectories. For each quantile level in \code{tau}, the function
+builds a tilt trajectory in the open unit ball and returns two objects:
 }
 \details{
 \itemize{

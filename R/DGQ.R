@@ -8,8 +8,8 @@
 #' Dynamic Geometric Quantile of a collection of multivariate time series
 #'
 #' Computes the Dynamic Geometric Quantile (DGQ) for a collection of `N`
-#' multivariate trajectories. For each tilt direction `u` in the open unit ball
-#' the function returns two objects:
+#' multivariate trajectories. For each quantile level in `tau`, the function
+#' builds a tilt trajectory in the open unit ball and returns two objects:
 #'
 #' * the **empirical DGQ** (the *constrained* estimator):
 #'   the real observed series minimising `C(j) + N <u, V(j)>`; and
@@ -54,12 +54,13 @@
 #'
 #' @param X A numeric array of dimension `c(N, T, d)` (series, time, variables),
 #'   or a list of `N` matrices each of dimension `c(T, d)`.
-#' @param u A length-`d` numeric vector giving a single tilt direction, or a
-#'   matrix whose rows are directions. Required; must be non-zero. Each
-#'   direction is normalized to unit length before computing the tilt vector
-#'   `(2 * tau - 1) * u_norm`.
-#' @param tau A scalar or numeric vector of quantile levels in `[0, 1]` (default 0.5,
-#'   representing the median). The tilt vector is calculated as `(2 * tau - 1) * u_norm`.
+#' @param u A length-`d` numeric vector giving one constant direction over time,
+#'   or a `T x d` numeric matrix giving a time-varying direction. Required; no
+#'   time point may have zero norm. Directions are normalized time-wise before
+#'   computing the tilt trajectory `(2 * tau - 1) * u_norm`.
+#' @param tau A scalar or numeric vector of quantile levels strictly inside
+#'   `(0, 1)` (default 0.5, representing the median). Multiple values produce
+#'   multiple returned directions, each using the same normalized `u`.
 #' @param metric Metric used for the underlying geometry: `"pooled"` (default,
 #'   a single pooled-whitening Mahalanobis metric giving exact affine
 #'   invariance), `"timewise"` (Mahalanobis using the per-time cross-sectional

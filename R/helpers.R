@@ -137,11 +137,12 @@
   res
 }
 
-## Assemble and validate the matrix of geometric-quantile tilt directions.
+## Assemble and validate geometric-quantile tilt trajectories.
 ##
-## The result U has one direction per row and dd variables per column. The
-## direction vector is (2*tau - 1)*u_norm; tol permits negligible floating-point
-## error at the validation boundary. Row names label outputs.
+## A vector u supplies one fixed direction that is replicated over all TT time
+## points. A matrix u supplies a time-varying direction and must already have
+## shape TT-by-dd. Each time row is normalized separately, then each tau value
+## scales the normalized trajectory by (2*tau - 1). List names label outputs.
 .build_directions <- function(u, tau, dd, TT, tol) {
   if (is.null(tau) || !is.numeric(tau) || any(is.na(tau)) || any(tau <= 0) || any(tau >= 1)) {
     stop("tau must be numeric with values strictly in the open interval (0, 1)")
@@ -167,10 +168,10 @@
   if (any(nrms < tol)) {
     stop("tilt direction u cannot be a zero vector at any time point (norm must be > 0)")
   }
-  # Always normalize to unit length time-wise
+  ## Always normalize to unit length time-wise.
   U_norm <- U_raw / nrms
 
-  # Construct combinations
+  ## Construct one tilt trajectory per quantile level.
   U <- list()
   for (ti in tau) {
     U_val <- (2 * ti - 1) * U_norm
