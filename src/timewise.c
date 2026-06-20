@@ -1,29 +1,24 @@
-/* compute_timewise.c -- time-wise geometric quantile implementation.
+/* timewise.c -- time-wise geometric quantile implementation.
  *
  * See dgq.h for the objective, estimating equation, modified Weiszfeld
  * update, convergence rule, and array-layout contract.
  */
 #include "dgq.h"
 #include <math.h>
-#include <stdlib.h>
 
 /* Convert the mathematical subscript Z_i(t)[k] to its linear buffer offset. */
 #define ZIDX(i, t, k, N, T) ((size_t)(i) + (size_t)(N) * (t) + (size_t)(N) * (T) * (k))
 
 /* Solve the geometric-u-quantile problem independently for every time point.
  *
- * q and qn hold the current and next d-dimensional iterates. This pure
- * numerical routine has no R error-reporting mechanism, so it returns
- * immediately if scratch allocation fails.
+ * q and qn are caller-owned length-d scratch buffers holding the current and
+ * next d-dimensional iterates; they are reused across time points.
  */
 void compute_timewise(const double *Z, int N, int T, int d,
                       const double *u, int iter, double eps,
-                      double *out)
+                      double *q, double *qn, double *out)
 {
     int i, k, t, it;
-    double *q  = (double *) calloc((size_t) d, sizeof(double));
-    double *qn = (double *) calloc((size_t) d, sizeof(double));
-    if (q == NULL || qn == NULL) { free(q); free(qn); return; }
 
     for (t = 0; t < T; t++) {
         /* Initialize q^(0) at the time-t cross-sectional mean, a stable
@@ -76,7 +71,4 @@ void compute_timewise(const double *Z, int N, int T, int d,
         for (k = 0; k < d; k++)
             out[(size_t) t + (size_t) T * k] = q[k];
     }
-
-    free(q);
-    free(qn);
 }

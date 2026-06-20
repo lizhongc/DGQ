@@ -1,112 +1,111 @@
 # ============================================================================
 #  DGQ: main user-facing function.
 #  Heavy numerics (depth C(j)/V(j) and the time-wise Weiszfeld iteration) are
-#  done in C; see src/compute_empirical.c, src/compute_timewise.c,
-#  src/r_empirical.c, and src/r_timewise.c.
+#  done in C; see src/empirical.c, src/timewise.c, and the R/SEXP boundary in
+#  src/R_export.c.
 # ============================================================================
 
-#' Dynamic Geometric Quantile of a collection of multivariate time series
-#'
-#' Computes the Dynamic Geometric Quantile (DGQ) for a collection of `N`
-#' multivariate trajectories. For each quantile level in `tau`, the function
-#' builds a tilt trajectory in the open unit ball and returns two objects:
-#'
-#' * the **empirical DGQ** (the *constrained* estimator):
-#'   the real observed series minimising `C(j) + N <u, V(j)>`; and
-#' * the **time-wise geometric quantile** (the
-#'   *unconstrained* population target): a free trajectory whose value at each
-#'   time `t` is Chaudhuri's geometric `u`-quantile of the time-`t` marginal.
-#'
-#' Both are returned.
-#'
-#' Let `Z_i(t)` denote trajectory `i` at time `t` after applying the selected
-#' metric transformation, and let `Zbar(t)` be its cross-sectional mean. The
-#' empirical branch computes
-#'
-#' `C(j) = sum_i sum_t ||Z_i(t) - Z_j(t)||`
-#'
-#' and
-#'
-#' `V(j) = sum_t {Zbar(t) - Z_j(t)}`.
-#'
-#' For each direction `u`, it returns the observed trajectory whose index
-#' minimizes `C(j) + N <u, V(j)>`. At `u = 0`, this is the dynamic medoid that
-#' minimizes total trajectory distance. With `method = "clara"`, the sum over
-#' `i` in `C(j)` is estimated from reference subsamples and scaled by `N/s`;
-#' `V(j)` remains exact. Empirical candidate calculations can be distributed
-#' over OpenMP threads with `n.cores > 1`; builds without OpenMP support ignore
-#' the request and execute serially.
-#'
-#' Independently at each time `t`, the time-wise branch minimizes
-#'
-#' `sum_i ||Z_i(t) - q|| - N <u, q>`
-#'
-#' over unrestricted `q`. Its first-order equation is
-#' `sum_i (q - Z_i(t)) / ||q - Z_i(t)|| = N u`, which is solved by a modified
-#' Weiszfeld iteration. The resulting standardized trajectory is transformed
-#' back to the analyzed data units before it is returned.
-#'
-#' Geometry is applied before either branch. `"pooled"` uses one mean and
-#' covariance over all series-time observations; `"timewise"` uses a separate
-#' cross-sectional mean and covariance at each time; `"none"` leaves the data
-#' unchanged. If `cumulative = TRUE`, cumulative paths are formed before this
-#' metric transformation.
-#'
-#' @param X A numeric array of dimension `c(N, T, d)` (series, time, variables),
-#'   or a list of `N` matrices each of dimension `c(T, d)`.
-#' @param u A length-`d` numeric vector giving one constant direction over time,
-#'   or a `T x d` numeric matrix giving a time-varying direction. Required; no
-#'   time point may have zero norm. Directions are normalized time-wise before
-#'   computing the tilt trajectory `(2 * tau - 1) * u_norm`.
-#' @param tau A scalar or numeric vector of quantile levels strictly inside
-#'   `(0, 1)` (default 0.5, representing the median). Multiple values produce
-#'   multiple returned directions, each using the same normalized `u`.
-#' @param metric Metric used for the underlying geometry: `"pooled"` (default,
-#'   a single pooled-whitening Mahalanobis metric giving exact affine
-#'   invariance), `"timewise"` (Mahalanobis using the per-time cross-sectional
-#'   covariance), or `"none"` (raw Euclidean).
-#' @param method Depth computation for the empirical branch: `"exact"`
-#'   (default, exact `C(j)`) or `"clara"` (a CLARA subsample estimate, cheaper
-#'   for large `N`).
-#' @param sample.size CLARA subsample size `s`. Defaults to
-#'   `min(N, ceiling(40 + 4 * sqrt(N)))`.
-#' @param clara.draws Number of CLARA subsamples to draw; the draw whose medoid
-#'   has the smallest depth is kept (default 5).
-#' @param iter,eps Maximum iterations and tolerance for the time-wise Weiszfeld
-#'   iteration.
-#' @param tol Numerical tolerance for tie-breaking.
-#' @param cumulative Logical; if `TRUE`, replace every series-variable path with
-#'   its cumulative sum over time before computing the metric and DGQs. Returned
-#'   data and trajectories are also cumulative. Defaults to `FALSE`.
-#' @param n.cores Positive integer giving the requested number of OpenMP cores/threads
-#'   for empirical candidate evaluation in both exact and CLARA modes. The
-#'   default `1L` preserves serial execution. Requests are limited to `N`
-#'   cores, and builds without OpenMP support run serially.
-#'
-#' @return An object of class `"DGQ"`: a list with components `empirical`
-#'   (indices and an `m x T x d` array of observed trajectories),
-#'   `timewise` (an `m x T x d` array of trajectories), `directions`,
-#'   `medoid`, `depth` (the `C(j)` vector), `metric`, `method`, `sample.size`
-#'   and the analyzed data `X` (cumulative when `cumulative = TRUE`). See
-#'   [print.DGQ()] and [plot.DGQ()].
-#'
-#' @examples
-#' set.seed(1)
-#' N <- 60; T <- 20; d <- 2
-#' X <- array(rnorm(N * T * d), dim = c(N, T, d))
-#' fit <- DGQ(X, u = c(1, 0))                   # dynamic median (tau = 0.5)
-#' fit
-#' fit2 <- DGQ(X, u = c(1, 0), tau = c(0.25, 0.75)) # tilted DGQs at multiple tau levels
-#' fit2$empirical$index
-#'
-#' @references
-#' Chaudhuri, P. (1996). On a geometric notion of quantiles for multivariate
-#' data. *J. Amer. Statist. Assoc.* 91(434), 862--872.
-#'
-#' Pena, D., Tsay, R. S., & Zamar, R. (2019). Empirical dynamic quantiles for
-#' visualization of high-dimensional time series. *Technometrics* 61(4),
-#' 429--444.
-#' @export
+# Dynamic Geometric Quantile of a collection of multivariate time series.
+#
+# Computes the Dynamic Geometric Quantile (DGQ) for a collection of N
+# multivariate trajectories. For each quantile level in `tau`, the function
+# builds a tilt trajectory in the open unit ball and returns two objects:
+#
+#   * the empirical DGQ (the constrained estimator): the real observed series
+#     minimising C(j) + N <u, V(j)>; and
+#   * the time-wise geometric quantile (the unconstrained population target): a
+#     free trajectory whose value at each time t is Chaudhuri's geometric
+#     u-quantile of the time-t marginal.
+#
+# Both are returned.
+#
+# Let Z_i(t) denote trajectory i at time t after applying the selected metric
+# transformation, and let Zbar(t) be its cross-sectional mean. The empirical
+# branch computes
+#
+#   C(j) = sum_i sum_t ||Z_i(t) - Z_j(t)||
+#
+# and
+#
+#   V(j) = sum_t {Zbar(t) - Z_j(t)}.
+#
+# For each direction u, it returns the observed trajectory whose index minimizes
+# C(j) + N <u, V(j)>. At u = 0, this is the dynamic medoid that minimizes total
+# trajectory distance. With method = "clara", the sum over i in C(j) is estimated
+# from reference subsamples and scaled by N/s; V(j) remains exact. Empirical
+# candidate calculations can be distributed over OpenMP threads with n.cores > 1;
+# builds without OpenMP support ignore the request and execute serially.
+#
+# Independently at each time t, the time-wise branch minimizes
+#
+#   sum_i ||Z_i(t) - q|| - N <u, q>
+#
+# over unrestricted q. Its first-order equation is
+# sum_i (q - Z_i(t)) / ||q - Z_i(t)|| = N u, which is solved by a modified
+# Weiszfeld iteration. The resulting standardized trajectory is transformed back
+# to the analyzed data units before it is returned.
+#
+# Geometry is applied before either branch. "pooled" uses one mean and covariance
+# over all series-time observations; "timewise" uses a separate cross-sectional
+# mean and covariance at each time; "none" leaves the data unchanged. If
+# cumulative = TRUE, cumulative paths are formed before this metric transformation.
+#
+# Arguments:
+#   X           : A numeric array of dimension c(N, T, d) (series, time,
+#                 variables), or a list of N matrices each of dimension c(T, d).
+#   u           : A length-d numeric vector giving one constant direction over
+#                 time, or a T x d numeric matrix giving a time-varying
+#                 direction. Required; no time point may have zero norm.
+#                 Directions are normalized time-wise before computing the tilt
+#                 trajectory (2 * tau - 1) * u_norm.
+#   tau         : A scalar or numeric vector of quantile levels strictly inside
+#                 (0, 1) (default 0.5, the median). Multiple values produce
+#                 multiple returned directions, each using the same normalized u.
+#   metric      : Underlying geometry: "pooled" (default, a single
+#                 pooled-whitening Mahalanobis metric giving exact affine
+#                 invariance), "timewise" (Mahalanobis using the per-time
+#                 cross-sectional covariance), or "none" (raw Euclidean).
+#   method      : Depth computation for the empirical branch: "exact" (default,
+#                 exact C(j)) or "clara" (a CLARA subsample estimate, cheaper for
+#                 large N).
+#   sample.size : CLARA subsample size s. Defaults to
+#                 min(N, ceiling(40 + 4 * sqrt(N))).
+#   clara.draws : Number of CLARA subsamples to draw; the draw whose medoid has
+#                 the smallest depth is kept (default 5).
+#   iter, eps   : Maximum iterations and tolerance for the time-wise Weiszfeld
+#                 iteration.
+#   tol         : Numerical tolerance for tie-breaking.
+#   cumulative  : Logical; if TRUE, replace every series-variable path with its
+#                 cumulative sum over time before computing the metric and DGQs.
+#                 Returned data and trajectories are also cumulative. Default FALSE.
+#   n.cores     : Positive integer giving the requested number of OpenMP
+#                 cores/threads for empirical candidate evaluation in both exact
+#                 and CLARA modes. The default 1L preserves serial execution.
+#                 Requests are limited to N cores, and builds without OpenMP
+#                 support run serially.
+#
+# Value:
+#   An object of class "DGQ": a list with components empirical (indices and an
+#   m x T x d array of observed trajectories), timewise (an m x T x d array of
+#   trajectories), directions, medoid, depth (the C(j) vector), metric, method,
+#   sample.size and the analyzed data X (cumulative when cumulative = TRUE). See
+#   print.DGQ() and plot.DGQ().
+#
+# Examples:
+#   set.seed(1)
+#   N <- 60; T <- 20; d <- 2
+#   X <- array(rnorm(N * T * d), dim = c(N, T, d))
+#   fit <- DGQ(X, u = c(1, 0))                        # dynamic median (tau = 0.5)
+#   fit
+#   fit2 <- DGQ(X, u = c(1, 0), tau = c(0.25, 0.75))  # tilted DGQs at multiple tau
+#   fit2$empirical$index
+#
+# References:
+#   Chaudhuri, P. (1996). On a geometric notion of quantiles for multivariate
+#   data. J. Amer. Statist. Assoc. 91(434), 862--872.
+#
+#   Pena, D., Tsay, R. S., & Zamar, R. (2019). Empirical dynamic quantiles for
+#   visualization of high-dimensional time series. Technometrics 61(4), 429--444.
 DGQ <- function(X,
                 u,
                 tau         = 0.5,

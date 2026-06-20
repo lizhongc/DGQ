@@ -18,7 +18,7 @@
 \maketitle
 
 <<setup, include=FALSE>>=
-knitr::opts_chunk$set(comment = "#>", fig.width = 7, fig.height = 4)
+knitr::opts_chunk$set(comment = "#>", fig.width = 7, fig.height = 3.5)
 @
 
 \section{What DGQ computes}
@@ -88,8 +88,32 @@ The empirical trajectories (solid) are real observed paths; the time-wise
 geometric quantiles (dashed) are the unconstrained targets, visibly damped
 because they average across crossing curves.
 
-<<plot, fig.width=7, fig.height=4>>=
+<<plot, fig.width=7, fig.height=3.5>>=
 plot(fit)
+@
+
+Beyond the default trajectory overlay (\texttt{type = "trajectory"}),
+\texttt{plot()} offers two further views of the selected series through the
+\texttt{type} argument.
+
+The \texttt{"rainbow"} view colours every series by its trajectory depth
+\(C(j)\)---deep, central series dark and shallow, outlying series bright---shades
+the central-50\% band, and overlays the dynamic medoid together with the
+empirical median (drawn when a \texttt{tau = 0.5} direction is present).
+
+<<rainbow, fig.width=7, fig.height=3.5>>=
+plot(fit, type = "rainbow")
+@
+
+The \texttt{"fan"} view draws the time-wise quantile fan---nested bands between
+symmetric \texttt{tau} pairs plus the median---and overlays the empirical
+per-\texttt{tau} selections as lines. Because the empirical DGQs are real
+observed series, their lines may cross or coincide, whereas the time-wise bands
+are smooth and nested. This view needs a fit with at least two quantile levels.
+
+<<fan, fig.width=7, fig.height=3.5>>=
+fit_fan <- DGQ(X, u = c(1, 0), tau = c(0.1, 0.3, 0.5, 0.7, 0.9))
+plot(fit_fan, type = "fan")
 @
 
 \section{Metrics, depth, and input formats}
@@ -122,12 +146,36 @@ identical(DGQ(Xl, u = c(1, 0))$medoid, DGQ(X, u = c(1, 0))$medoid)
 
 For increment or flow data, set \texttt{cumulative = TRUE} to analyze
 cumulative levels. Each series-variable path is cumulatively summed over time
-before whitening and DGQ computation; returned trajectories and plots are
-cumulative.
+before whitening and DGQ computation, so the geometry, the depth \(C(j)\), and
+both DGQ branches operate on the integrated levels; the returned trajectories
+and every \texttt{plot()} view are then in cumulative units. This matters when
+the raw data are increments (returns, flows, rainfall) but the quantity of
+interest is the accumulated total: the dynamic median then represents the most
+central \emph{accumulation path} rather than the most central oscillation.
 
 <<cumulative>>=
-fit_cumulative <- DGQ(X, u = c(1, 0), cumulative = TRUE)
+fit_cumulative <- DGQ(X, u = c(1, 0), tau = c(0.15, 0.5, 0.85), cumulative = TRUE)
 fit_cumulative$cumulative
+@
+
+The contrast is clearest side by side. On the increments the trajectories
+oscillate around their offsets and the time-wise quantile is heavily damped; on
+the cumulative levels the paths spread into trending fans and the empirical DGQ
+tracks a coherent accumulation path.
+
+<<cum-incr, fig.width=7, fig.height=3.5>>=
+plot(fit)              # increments (Section 4 fit)
+@
+
+<<cum-levels, fig.width=7, fig.height=3.5>>=
+plot(fit_cumulative)   # cumulative levels
+@
+
+The depth-ranked view makes the same point: under accumulation, central and
+outlying paths separate more strongly because early differences persist.
+
+<<cum-rainbow, fig.width=7, fig.height=3.5>>=
+plot(fit_cumulative, type = "rainbow")
 @
 
 \end{document}

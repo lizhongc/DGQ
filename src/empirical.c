@@ -1,4 +1,4 @@
-/* compute_empirical.c -- empirical DGQ depth and tilt implementation.
+/* empirical.c -- empirical DGQ depth and tilt implementation.
  *
  * See dgq.h for the complete mathematical contract. This file maps the depth
  * C(j) and tilt V(j) definitions directly to loops over the R-compatible
@@ -24,9 +24,9 @@ void compute_empirical(const double *Z, int N, int T, int d,
 {
     int i, j, k, t;
     double scale = (nref > 0) ? ((double) N / (double) nref) : 0.0;
-#ifndef _OPENMP
+    #ifndef _OPENMP
     (void) nthreads;
-#endif
+    #endif
 
     /* Precompute Zbar(t)[k] once. The i-loop preserves the original
      * cross-sectional summation order used by the serial implementation.
@@ -47,10 +47,10 @@ void compute_empirical(const double *Z, int N, int T, int d,
      * this outer loop safe for static OpenMP parallelism. Builds without
      * OpenMP ignore the pragma and execute the same loop serially.
      */
-#ifdef _OPENMP
-#pragma omp parallel for schedule(static) num_threads(nthreads) \
-    default(none) shared(Z, N, T, d, ref, nref, scale, mean_tk, C, V)
-#endif
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(static) num_threads(nthreads) \
+        default(none) shared(Z, N, T, d, ref, nref, scale, mean_tk, C, V)
+    #endif
     for (j = 0; j < N; j++) {
         double cj = 0.0;
         for (int rr = 0; rr < nref; rr++) {
@@ -58,8 +58,7 @@ void compute_empirical(const double *Z, int N, int T, int d,
             for (int tt = 0; tt < T; tt++) {
                 double ss = 0.0;
                 for (int kk = 0; kk < d; kk++) {
-                    double diff = Z[ZIDX(ri, tt, kk, N, T)] -
-                                  Z[ZIDX(j, tt, kk, N, T)];
+                    double diff = Z[ZIDX(ri, tt, kk, N, T)] - Z[ZIDX(j, tt, kk, N, T)];
                     ss += diff * diff;
                 }
                 cj += sqrt(ss);
@@ -72,9 +71,7 @@ void compute_empirical(const double *Z, int N, int T, int d,
          */
         for (int kk = 0; kk < d; kk++) {
             for (int tt = 0; tt < T; tt++) {
-                V[(size_t) j + (size_t) N * tt + (size_t) N * T * kk] =
-                    mean_tk[(size_t) tt + (size_t) T * kk] -
-                    Z[ZIDX(j, tt, kk, N, T)];
+                V[ZIDX(j, tt, kk, N, T)] = mean_tk[(size_t) tt + (size_t) T * kk] - Z[ZIDX(j, tt, kk, N, T)];
             }
         }
     }

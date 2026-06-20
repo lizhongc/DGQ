@@ -1,7 +1,7 @@
 /* init.c -- registration-only entry point for the DGQ shared library.
  *
- * Keeping registration separate from r_empirical.c and r_timewise.c makes the
- * SEXP wrappers easy to identify while exposing only the listed interfaces.
+ * Keeping registration separate from R_export.c makes the SEXP wrappers easy
+ * to identify while exposing only the listed interfaces.
  */
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>

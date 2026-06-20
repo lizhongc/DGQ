@@ -1,8 +1,7 @@
 /* dgq.h -- mathematical and memory-layout contract for the pure C core.
  *
  * The routines declared here contain no R API calls. They receive plain C
- * buffers from r_empirical.c and r_timewise.c and compute in the standardized
- * coordinate system.
+ * buffers from R_export.c and compute in the standardized coordinate system.
  *
  * DATA AND ARRAY LAYOUT
  * ---------------------
@@ -61,10 +60,10 @@
  * matrix is formed. With OpenMP support, nthreads controls the candidate-level
  * parallel region; otherwise execution is serial.
  */
-void compute_empirical(const double *Z, int N, int T, int d,
-                       const int *ref, int nref,
-                       double *mean_tk, int nthreads,
-                       double *C, double *V);
+void compute_empirical(const double *, int, int, int,
+                       const int *, int,
+                       double *, int,
+                       double *, double *);
 
 /* Compute the time-wise geometric u-quantile, the unconstrained DGQ target.
  *
@@ -91,13 +90,15 @@ void compute_empirical(const double *Z, int N, int T, int d,
  *   u       column-major (T,d) matrix of tilt directions;
  *   iter    maximum updates per time point;
  *   eps     positive distance guard and convergence tolerance.
+ *   q, qn   caller-owned length-d scratch buffers for the current and next
+ *           iterates; reused across time points.
  * Output:
  *   out     column-major (T,d) matrix, out[t + T*k] = q_u(t)[k].
  *
- * Time complexity is O(T*iter*N*d); scratch memory is O(d).
+ * Time complexity is O(T*iter*N*d); scratch (q, qn) is caller-provided and O(d).
  */
-void compute_timewise(const double *Z, int N, int T, int d,
-                      const double *u, int iter, double eps,
-                      double *out);
+void compute_timewise(const double *, int, int, int,
+                      const double *, int, double,
+                      double *, double *, double *);
 
 #endif /* DGQ_H */

@@ -1,5 +1,5 @@
 ## ----setup, include=FALSE-----------------------------------------------------
-knitr::opts_chunk$set(comment = "#>", fig.width = 7, fig.height = 4)
+knitr::opts_chunk$set(comment = "#>", fig.width = 7, fig.height = 3.5)
 
 ## ----library------------------------------------------------------------------
 library(DGQ)
@@ -26,8 +26,15 @@ fit0
 fit <- DGQ(X, u = c(1, 0), tau = c(0.15, 0.5, 0.85))
 fit$empirical$index          # observed series representing each direction
 
-## ----plot, fig.width=7, fig.height=4------------------------------------------
+## ----plot, fig.width=7, fig.height=3.5----------------------------------------
 plot(fit)
+
+## ----rainbow, fig.width=7, fig.height=3.5-------------------------------------
+plot(fit, type = "rainbow")
+
+## ----fan, fig.width=7, fig.height=3.5-----------------------------------------
+fit_fan <- DGQ(X, u = c(1, 0), tau = c(0.1, 0.3, 0.5, 0.7, 0.9))
+plot(fit_fan, type = "fan")
 
 ## ----clara--------------------------------------------------------------------
 fit_clara <- DGQ(X, u = c(1, 0), tau = c(0.15, 0.5, 0.85), method = "clara", sample.size = 80)
@@ -38,6 +45,15 @@ Xl <- lapply(seq_len(N), function(i) X[i, , ])
 identical(DGQ(Xl, u = c(1, 0))$medoid, DGQ(X, u = c(1, 0))$medoid)
 
 ## ----cumulative---------------------------------------------------------------
-fit_cumulative <- DGQ(X, u = c(1, 0), cumulative = TRUE)
+fit_cumulative <- DGQ(X, u = c(1, 0), tau = c(0.15, 0.5, 0.85), cumulative = TRUE)
 fit_cumulative$cumulative
+
+## ----cum-incr, fig.width=7, fig.height=3.5------------------------------------
+plot(fit)              # increments (Section 4 fit)
+
+## ----cum-levels, fig.width=7, fig.height=3.5----------------------------------
+plot(fit_cumulative)   # cumulative levels
+
+## ----cum-rainbow, fig.width=7, fig.height=3.5---------------------------------
+plot(fit_cumulative, type = "rainbow")
 

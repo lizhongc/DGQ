@@ -280,6 +280,21 @@ test_that("invalid directions and basic S3 methods behave", {
   expect_invisible(plot(f)); dev.off(); unlink(pf)
 })
 
+test_that("plot() rainbow and fan types render", {
+  set.seed(11)
+  X <- array(rnorm(40 * 8 * 2), dim = c(40, 8, 2))
+  f1 <- DGQ(X, u = c(1, 0), tau = 0.5)
+  f5 <- DGQ(X, u = c(1, 0), tau = c(0.1, 0.25, 0.5, 0.75, 0.9))
+  pf <- tempfile(fileext = ".pdf"); pdf(pf)
+  expect_invisible(plot(f1, type = "trajectory"))
+  expect_invisible(plot(f1, type = "rainbow"))
+  expect_invisible(plot(f5, type = "fan"))
+  expect_invisible(plot(f5, type = "fan", components = 1))
+  dev.off(); unlink(pf)
+  expect_error(plot(f1, type = "fan"), "at least 2 tau")
+  expect_error(plot(f1, type = "nope"))   # match.arg rejects unknown type
+})
+
 # 11. time-varying directions verification -----------------------------------
 
 test_that("T x d matrix directions work and equal replicated vector u", {
